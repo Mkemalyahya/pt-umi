@@ -6,6 +6,9 @@
     <title>PT umiBahagia - Manajemen Tugas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library untuk export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-5xl">
@@ -19,8 +22,14 @@
 
         <!-- Task Table -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            <div class="flex justify-between items-center bg-blue-600 text-white p-4">
+                <h2 class="text-lg font-semibold">Daftar Tugas</h2>
+                <button onclick="exportToPDF()" class="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-blue-50 flex items-center">
+                    <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                </button>
+            </div>
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full" id="taskTable">
                     <thead class="bg-blue-600 text-white">
                         <tr>
                             <th class="py-3 px-4 text-left font-semibold">Tanggal</th>
@@ -38,12 +47,13 @@
             </div>
         </div>
 
-        <!-- Add Task Form -->
+        <!-- Add/Edit Task Form -->
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-blue-800 mb-4">
+            <h2 id="formTitle" class="text-xl font-semibold text-blue-800 mb-4">
                 <i class="fas fa-plus-circle mr-2"></i>Tambah Tugas Baru
             </h2>
-            <form id="addTaskForm" class="space-y-4">
+            <form id="taskForm" class="space-y-4">
+                <input type="hidden" id="editIndex" value="-1">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="tanggal" class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
@@ -73,10 +83,13 @@
                     </div>
                 </div>
                 
-                <div class="pt-2">
-                    <button type="submit" 
-                        class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                        <i class="fas fa-save mr-2"></i>Simpan Tugas
+                <div class="pt-2 flex space-x-3">
+                    <button type="submit" id="submitButton"
+                        class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                        <i class="fas fa-save mr-2"></i>Simpan
+                    </button>
+                    <button type="button" id="cancelEdit" onclick="cancelEdit()" class="hidden px-6 py-2 bg-gray-300 text-gray-800 font-medium rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Batal
                     </button>
                 </div>
             </form>
@@ -89,8 +102,10 @@
             </h3>
             <ul class="list-disc pl-5 space-y-1 text-gray-700">
                 <li>Isi form di atas untuk menambahkan tugas baru</li>
+                <li>Klik ikon pensil untuk mengedit tugas yang ada</li>
                 <li>Centang kotak untuk menandai tugas sebagai selesai</li>
                 <li>Klik ikon tong sampah untuk menghapus tugas</li>
+                <li>Klik "Export PDF" untuk menyimpan daftar tugas</li>
                 <li>Status berubah warna: kuning (belum), hijau (selesai)</li>
                 <li>Data tersimpan otomatis di browser Anda</li>
             </ul>
@@ -98,10 +113,19 @@
     </div>
 
     <script>
+        // Inisialisasi jsPDF
+        const { jsPDF } = window.jspdf;
+
         // Format date from YYYY-MM-DD to DD-MM-YYYY
         function formatDate(dateString) {
             const [year, month, day] = dateString.split('-');
             return `${day}-${month}-${year}`;
+        }
+
+        // Format date from DD-MM-YYYY to YYYY-MM-DD (for date input)
+        function formatDateForInput(dateString) {
+            const [day, month, year] = dateString.split('-');
+            return `${year}-${month}-${day}`;
         }
 
         // Get status badge class based on status
@@ -130,6 +154,7 @@
                 const tasks = db.getTasks();
                 tasks.push(task);
                 db.saveTasks(tasks);
+                return tasks.length - 1; // Return index of new task
             },
             
             // Update task
@@ -146,6 +171,72 @@
                 db.saveTasks(tasks);
             }
         };
+
+        // Export data ke PDF
+        function exportToPDF() {
+            const tasks = db.getTasks();
+            
+            if (tasks.length === 0) {
+                showAlert('Tidak ada data untuk diexport', 'error');
+                return;
+            }
+
+            const doc = new jsPDF();
+            
+            // Judul dokumen
+            doc.setFontSize(18);
+            doc.text('Daftar Tugas PT umiBahagia', 105, 15, { align: 'center' });
+            
+            // Tanggal export
+            doc.setFontSize(10);
+            const exportDate = new Date().toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+            doc.text(`Dicetak pada: ${exportDate}`, 105, 22, { align: 'center' });
+            
+            // Prepare data untuk tabel
+            const tableData = tasks.map(task => [
+                formatDate(task.tanggal),
+                task.tugas,
+                task.status,
+                task.ket,
+                task.status === 'Selesai' ? '✓' : '✗'
+            ]);
+            
+            // Buat tabel
+            doc.autoTable({
+                head: [['Tanggal', 'Tugas', 'Status', 'Keterangan', 'Selesai']],
+                body: tableData,
+                startY: 30,
+                styles: {
+                    fontSize: 10,
+                    cellPadding: 3,
+                    valign: 'middle'
+                },
+                headStyles: {
+                    fillColor: [70, 130, 180], // Warna biru
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                alternateRowStyles: {
+                    fillColor: [240, 240, 240]
+                },
+                columnStyles: {
+                    0: { cellWidth: 25 }, // Tanggal
+                    1: { cellWidth: 'auto' }, // Tugas
+                    2: { cellWidth: 25 }, // Status
+                    3: { cellWidth: 'auto' }, // Keterangan
+                    4: { cellWidth: 15 } // Selesai
+                }
+            });
+            
+            // Simpan PDF
+            doc.save(`Daftar_Tugas_PT_umiBahagia_${new Date().toISOString().slice(0,10)}.pdf`);
+            
+            showAlert('PDF berhasil di-generate!', 'success');
+        }
 
         // Load tasks from database
         function loadTasks() {
@@ -168,7 +259,10 @@
                             class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" 
                             onchange="toggleTaskStatus(this, ${index})">
                     </td>
-                    <td class="py-3 px-4 text-center">
+                    <td class="py-3 px-4 text-center space-x-2">
+                        <button onclick="editTask(${index})" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button onclick="deleteTask(${index})" class="text-red-500 hover:text-red-700">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -178,29 +272,94 @@
             });
         }
 
-        // Add new task
-        document.getElementById('addTaskForm').addEventListener('submit', function(e) {
+        // Edit task
+        function editTask(index) {
+            const tasks = db.getTasks();
+            const task = tasks[index];
+            
+            // Set form to edit mode
+            document.getElementById('editIndex').value = index;
+            document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit mr-2"></i>Edit Tugas';
+            document.getElementById('submitButton').innerHTML = '<i class="fas fa-save mr-2"></i>Update';
+            
+            // Fill form with task data
+            document.getElementById('tanggal').value = formatDateForInput(task.tanggal);
+            document.getElementById('tugas').value = task.tugas;
+            document.getElementById('status').value = task.status;
+            document.getElementById('ket').value = task.ket;
+            
+            // Show cancel button
+            document.getElementById('cancelEdit').classList.remove('hidden');
+            
+            // Scroll to form
+            document.getElementById('taskForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel edit
+        function cancelEdit() {
+            // Reset form
+            document.getElementById('taskForm').reset();
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('formTitle').innerHTML = '<i class="fas fa-plus-circle mr-2"></i>Tambah Tugas Baru';
+            document.getElementById('submitButton').innerHTML = '<i class="fas fa-save mr-2"></i>Simpan';
+            document.getElementById('cancelEdit').classList.add('hidden');
+            
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tanggal').value = today;
+        }
+
+        // Handle form submission (add/edit)
+        document.getElementById('taskForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            const index = document.getElementById('editIndex').value;
             const tanggal = document.getElementById('tanggal').value;
             const tugas = document.getElementById('tugas').value;
             const status = document.getElementById('status').value;
             const ket = document.getElementById('ket').value || '-';
             
-            const newTask = {
+            const taskData = {
                 tanggal,
                 tugas,
                 status,
                 ket
             };
             
-            db.addTask(newTask);
-            loadTasks();
-            this.reset();
+            if (index === "-1") {
+                // Add new task
+                db.addTask(taskData);
+                showAlert('Tugas berhasil ditambahkan!', 'success');
+            } else {
+                // Update existing task
+                db.updateTask(index, taskData);
+                showAlert('Tugas berhasil diperbarui!', 'success');
+            }
             
-            // Show success message
-            alert('Tugas berhasil ditambahkan!');
+            loadTasks();
+            cancelEdit(); // Reset form
         });
+
+        // Show alert message
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-md text-white ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            alertDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Remove alert after 3 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
 
         // Toggle task status
         function toggleTaskStatus(checkbox, index) {
@@ -217,6 +376,7 @@
             if (confirm('Apakah Anda yakin ingin menghapus tugas ini?')) {
                 db.deleteTask(index);
                 loadTasks();
+                showAlert('Tugas berhasil dihapus!', 'success');
             }
         }
 
