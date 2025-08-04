@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PT umiBahagia - Manajemen Tugas</title>
+    <title>PT umiBahagia - Manajemen Tugas & Pembayaran</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Library untuk export PDF -->
@@ -11,19 +11,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
         <!-- Header -->
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-bold text-blue-800 mb-2">
                 <i class="fas fa-tasks mr-2"></i>PT umiBahagia
             </h1>
-            <p class="text-gray-600">Sistem Manajemen Tugas Harian</p>
+            <p class="text-gray-600">Sistem Manajemen Tugas & Pembayaran</p>
         </header>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                <h3 class="text-sm font-medium text-gray-500">Total Tugas</h3>
+                <p id="totalTasks" class="text-2xl font-semibold">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                <h3 class="text-sm font-medium text-gray-500">Total Terbayar</h3>
+                <p id="totalPaid" class="text-2xl font-semibold">Rp 0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
+                <h3 class="text-sm font-medium text-gray-500">Total Belum Terbayar</h3>
+                <p id="totalUnpaid" class="text-2xl font-semibold">Rp 0</p>
+            </div>
+        </div>
 
         <!-- Task Table -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
             <div class="flex justify-between items-center bg-blue-600 text-white p-4">
-                <h2 class="text-lg font-semibold">Daftar Tugas</h2>
+                <h2 class="text-lg font-semibold">Daftar Tugas & Pembayaran</h2>
                 <button onclick="exportToPDF()" class="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-blue-50 flex items-center">
                     <i class="fas fa-file-pdf mr-2"></i>Export PDF
                 </button>
@@ -36,7 +52,8 @@
                             <th class="py-3 px-4 text-left font-semibold">Tugas</th>
                             <th class="py-3 px-4 text-left font-semibold">Status</th>
                             <th class="py-3 px-4 text-left font-semibold">Keterangan</th>
-                            <th class="py-3 px-4 text-center font-semibold">Selesai</th>
+                            <th class="py-3 px-4 text-right font-semibold">Harga (Rp)</th>
+                            <th class="py-3 px-4 text-center font-semibold">Pembayaran</th>
                             <th class="py-3 px-4 text-center font-semibold">Aksi</th>
                         </tr>
                     </thead>
@@ -67,9 +84,9 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status Tugas</label>
                         <select id="status" required 
                             class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="Belum">Belum Dikerjakan</option>
@@ -77,10 +94,24 @@
                         </select>
                     </div>
                     <div>
-                        <label for="ket" class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
-                        <input type="text" id="ket" placeholder="Tambahkan keterangan (opsional)" 
+                        <label for="harga" class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+                        <input type="number" id="harga" placeholder="Masukkan harga" required 
                             class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <div>
+                        <label for="pembayaran" class="block text-sm font-medium text-gray-700 mb-1">Status Pembayaran</label>
+                        <select id="pembayaran" required 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="Belum">Belum Dibayar</option>
+                            <option value="Lunas">Lunas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="ket" class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+                    <input type="text" id="ket" placeholder="Tambahkan keterangan (opsional)" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 
                 <div class="pt-2 flex space-x-3">
@@ -106,7 +137,8 @@
                 <li>Centang kotak untuk menandai tugas sebagai selesai</li>
                 <li>Klik ikon tong sampah untuk menghapus tugas</li>
                 <li>Klik "Export PDF" untuk menyimpan daftar tugas</li>
-                <li>Status berubah warna: kuning (belum), hijau (selesai)</li>
+                <li>Status tugas: kuning (belum), hijau (selesai)</li>
+                <li>Pembayaran: merah (belum), hijau (lunas)</li>
                 <li>Data tersimpan otomatis di browser Anda</li>
             </ul>
         </div>
@@ -115,6 +147,15 @@
     <script>
         // Inisialisasi jsPDF
         const { jsPDF } = window.jspdf;
+
+        // Format number to Rupiah
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', { 
+                style: 'currency', 
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(angka);
+        }
 
         // Format date from YYYY-MM-DD to DD-MM-YYYY
         function formatDate(dateString) {
@@ -134,6 +175,14 @@
                 return 'bg-green-100 text-green-800';
             }
             return 'bg-yellow-100 text-yellow-800';
+        }
+
+        // Get payment badge class based on status
+        function getPaymentBadge(status) {
+            if (status === 'Lunas') {
+                return 'bg-green-100 text-green-800';
+            }
+            return 'bg-red-100 text-red-800';
         }
 
         // Database functions
@@ -172,6 +221,27 @@
             }
         };
 
+        // Calculate and update summary
+        function updateSummary() {
+            const tasks = db.getTasks();
+            const totalTasks = tasks.length;
+            
+            let totalPaid = 0;
+            let totalUnpaid = 0;
+            
+            tasks.forEach(task => {
+                if (task.pembayaran === 'Lunas') {
+                    totalPaid += parseInt(task.harga) || 0;
+                } else {
+                    totalUnpaid += parseInt(task.harga) || 0;
+                }
+            });
+            
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('totalPaid').textContent = formatRupiah(totalPaid);
+            document.getElementById('totalUnpaid').textContent = formatRupiah(totalUnpaid);
+        }
+
         // Export data ke PDF
         function exportToPDF() {
             const tasks = db.getTasks();
@@ -185,7 +255,7 @@
             
             // Judul dokumen
             doc.setFontSize(18);
-            doc.text('Daftar Tugas PT umiBahagia', 105, 15, { align: 'center' });
+            doc.text('Daftar Tugas & Pembayaran PT umiBahagia', 105, 15, { align: 'center' });
             
             // Tanggal export
             doc.setFontSize(10);
@@ -196,22 +266,41 @@
             });
             doc.text(`Dicetak pada: ${exportDate}`, 105, 22, { align: 'center' });
             
+            // Summary
+            doc.setFontSize(11);
+            doc.text(`Total Tugas: ${tasks.length}`, 14, 30);
+            
+            // Calculate totals
+            let totalPaid = 0;
+            let totalUnpaid = 0;
+            tasks.forEach(task => {
+                if (task.pembayaran === 'Lunas') {
+                    totalPaid += parseInt(task.harga) || 0;
+                } else {
+                    totalUnpaid += parseInt(task.harga) || 0;
+                }
+            });
+            
+            doc.text(`Total Terbayar: ${formatRupiah(totalPaid).replace('Rp', 'Rp ')}`, 14, 36);
+            doc.text(`Total Belum Terbayar: ${formatRupiah(totalUnpaid).replace('Rp', 'Rp ')}`, 14, 42);
+            
             // Prepare data untuk tabel
             const tableData = tasks.map(task => [
                 formatDate(task.tanggal),
                 task.tugas,
                 task.status,
                 task.ket,
-                task.status === 'Selesai' ? '✓' : '✗'
+                formatRupiah(parseInt(task.harga)).replace('Rp', 'Rp '),
+                task.pembayaran
             ]);
             
             // Buat tabel
             doc.autoTable({
-                head: [['Tanggal', 'Tugas', 'Status', 'Keterangan', 'Selesai']],
+                head: [['Tanggal', 'Tugas', 'Status', 'Keterangan', 'Harga', 'Pembayaran']],
                 body: tableData,
-                startY: 30,
+                startY: 50,
                 styles: {
-                    fontSize: 10,
+                    fontSize: 9,
                     cellPadding: 3,
                     valign: 'middle'
                 },
@@ -224,16 +313,34 @@
                     fillColor: [240, 240, 240]
                 },
                 columnStyles: {
-                    0: { cellWidth: 25 }, // Tanggal
+                    0: { cellWidth: 20 }, // Tanggal
                     1: { cellWidth: 'auto' }, // Tugas
-                    2: { cellWidth: 25 }, // Status
+                    2: { cellWidth: 20 }, // Status
                     3: { cellWidth: 'auto' }, // Keterangan
-                    4: { cellWidth: 15 } // Selesai
+                    4: { cellWidth: 25 }, // Harga
+                    5: { cellWidth: 20 } // Pembayaran
+                },
+                didParseCell: function(data) {
+                    // Warn cells based on status
+                    if (data.column.index === 2) { // Status column
+                        if (data.cell.raw === 'Selesai') {
+                            data.cell.styles.fillColor = [220, 255, 220];
+                        } else {
+                            data.cell.styles.fillColor = [255, 255, 200];
+                        }
+                    }
+                    if (data.column.index === 5) { // Payment column
+                        if (data.cell.raw === 'Lunas') {
+                            data.cell.styles.fillColor = [220, 255, 220];
+                        } else {
+                            data.cell.styles.fillColor = [255, 220, 220];
+                        }
+                    }
                 }
             });
             
             // Simpan PDF
-            doc.save(`Daftar_Tugas_PT_umiBahagia_${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save(`Daftar_Tugas_Pembayaran_PT_umiBahagia_${new Date().toISOString().slice(0,10)}.pdf`);
             
             showAlert('PDF berhasil di-generate!', 'success');
         }
@@ -254,10 +361,9 @@
                         <span class="px-2 py-1 rounded-full text-xs ${getStatusBadge(task.status)}">${task.status}</span>
                     </td>
                     <td class="py-3 px-4 text-gray-500">${task.ket}</td>
+                    <td class="py-3 px-4 text-right font-mono">${formatRupiah(parseInt(task.harga))}</td>
                     <td class="py-3 px-4 text-center">
-                        <input type="checkbox" ${task.status === 'Selesai' ? 'checked' : ''} 
-                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" 
-                            onchange="toggleTaskStatus(this, ${index})">
+                        <span class="px-2 py-1 rounded-full text-xs ${getPaymentBadge(task.pembayaran)}">${task.pembayaran}</span>
                     </td>
                     <td class="py-3 px-4 text-center space-x-2">
                         <button onclick="editTask(${index})" class="text-blue-500 hover:text-blue-700">
@@ -270,6 +376,8 @@
                 `;
                 tbody.appendChild(tr);
             });
+
+            updateSummary();
         }
 
         // Edit task
@@ -286,6 +394,8 @@
             document.getElementById('tanggal').value = formatDateForInput(task.tanggal);
             document.getElementById('tugas').value = task.tugas;
             document.getElementById('status').value = task.status;
+            document.getElementById('harga').value = task.harga;
+            document.getElementById('pembayaran').value = task.pembayaran;
             document.getElementById('ket').value = task.ket;
             
             // Show cancel button
@@ -317,12 +427,16 @@
             const tanggal = document.getElementById('tanggal').value;
             const tugas = document.getElementById('tugas').value;
             const status = document.getElementById('status').value;
+            const harga = document.getElementById('harga').value;
+            const pembayaran = document.getElementById('pembayaran').value;
             const ket = document.getElementById('ket').value || '-';
             
             const taskData = {
                 tanggal,
                 tugas,
                 status,
+                harga,
+                pembayaran,
                 ket
             };
             
